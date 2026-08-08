@@ -211,11 +211,15 @@ devops-cicd-gitops-lab/
 
 <h2 id="demo-videos">🎬 Demo Videos</h2>
 
-Click the card below to watch the full CI/CD GitOps loop in action — from `git push` to automatic production deployment:
+Click the thumbnail below to watch the full CI/CD GitOps loop in action — from `git push` to automatic production deployment:
 
-| 🔁 CI/CD GitOps Pipeline Demo |
-| :---: |
-| [![CI/CD GitOps Demo](https://img.youtube.com/vi/NL9wqVSmvm0/0.jpg)](https://youtu.be/NL9wqVSmvm0) |
+<p align="center">
+  <a href="https://youtu.be/NL9wqVSmvm0">
+    <img src="https://img.youtube.com/vi/NL9wqVSmvm0/0.jpg" alt="CI/CD GitOps Pipeline Demo" width="600">
+  </a>
+  <br>
+  <strong>▶️ CI/CD GitOps Pipeline Demo</strong>
+</p>
 
 ---
 
@@ -316,44 +320,16 @@ Cluster state and networking verified end-to-end:
 
 Building this pipeline manually — without a managed CI/CD or Kubernetes service — surfaced a long list of real-world issues. Below are the 8 most significant ones, spanning security design, CI reliability, GitOps semantics, and observability internals:
 
-### 1. SSH Jump Host Requirement (Security Group Design)
-*   **Problem**: `ssh: connect to host <Target-IP> port 22: Connection timed out` when connecting directly from a local machine.
-*   **Root Cause**: By design, `SG-Target-K3s` only allows SSH from `SG-Management`, not from arbitrary external IPs.
-*   **Fix**: SSH into the Management Server first, then `ssh` from there into the Target Server using its private IP.
-
-### 2. Docker Hub Authentication & Identity Mismatch
-*   **Problem**: `docker login` in the pipeline failed with `unauthorized: incorrect username or password` even with correct-looking credentials, and continued failing after generating a token.
-*   **Root Cause**: Two compounding issues — Docker Hub required a **Personal Access Token** instead of the account password, and the Docker Hub username was actually different from the GitHub username hardcoded in the Jenkinsfile.
-*   **Fix**: Generate a Docker Hub Access Token (Read & Write scope) for Jenkins Credentials, and verify/correct the real Docker Hub username consistently across `Jenkinsfile`, Jenkins Credentials, and `web-app.yaml`.
-
-### 3. Stale Jenkins Workspace Blocking Re-Clone
-*   **Problem**: `fatal: destination path 'gitops-config' already exists and is not an empty directory` on subsequent builds.
-*   **Root Cause**: Jenkins reuses the same workspace across builds; a leftover clone from a previously failed run blocked the new `git clone`.
-*   **Fix**: Add `rm -rf gitops-config` immediately before the `git clone` step in the Jenkinsfile.
-
-### 4. `ImagePullBackOff` from a Stale Manifest
-*   **Problem**: ArgoCD deployed the app, but pods entered `ErrImagePull` / `ImagePullBackOff`.
-*   **Root Cause**: `web-app.yaml` still referenced the original placeholder tag/username, which was never actually pushed to the registry.
-*   **Fix**: Correct the `image:` field to a real, pushed tag, and let Jenkins overwrite it automatically on the next build going forward.
-
-### 5. Prometheus Not Scraping via Legacy Annotations
-*   **Problem**: All Grafana panels showed `No data` despite adding `prometheus.io/scrape` annotations.
-*   **Root Cause**: `kube-prometheus-stack` uses the Prometheus Operator, which discovers targets via `ServiceMonitor` custom resources — not legacy scrape annotations.
-*   **Fix**: Add a named port + labels to the Service, and create a matching `ServiceMonitor` with `release: <helm-release-name>` in its labels.
-
-### 6. Loki/Grafana Version Incompatibility
-*   **Problem**: Grafana's Loki data source failed health checks with `parse error at line 1, col 1: unexpected IDENTIFIER`, even though Loki itself was healthy (`/ready` returned `ready`).
-*   **Root Cause**: The default Loki version bundled with the `loki-stack` chart was too old for the newer Grafana's health-check query syntax.
-*   **Fix**: `helm upgrade loki-stack grafana/loki-stack -n monitoring --reuse-values --set loki.image.tag=2.9.3`.
-
-### 7. GitOps Drift Reverted by ArgoCD Self-Heal
-*   **Problem**: `kubectl scale deployment postgres --replicas=0` (to simulate a failure) was silently reverted back to `replicas=1` within seconds.
-*   **Root Cause**: ArgoCD's Auto-Sync + Self-Heal actively reconciles any manual `kubectl` change back to what's declared in Git.
-*   **Fix**: Edit `replicas` inside the Git-managed YAML and push, instead of mutating the live cluster directly — the intended GitOps behavior.
-
-### 8. Double TLS Termination Behind Ingress
-*   **Problem**: ArgoCD's own HTTPS (self-signed) conflicted with the Ingress-managed TLS certificate.
-*   **Fix**: Patch the `argocd-server` Deployment to run with the `--insecure` flag, letting Traefik + cert-manager fully own TLS termination at the Ingress layer.
+| # | Problem | Root Cause | Fix |
+|---|---|---|---|
+| 1 | `ssh: connect to host <Target-IP> port 22: Connection timed out` when connecting directly from a local machine | By design, `SG-Target-K3s` only allows SSH from `SG-Management`, not from arbitrary external IPs | SSH into the Management Server first, then `ssh` from there into the Target Server using its private IP |
+| 2 | `docker login` failed in the pipeline with `unauthorized: incorrect username or password`, even after generating a token | Two compounding issues: Docker Hub required a **Personal Access Token** instead of a password, and the Docker Hub username was actually different from the GitHub username hardcoded in the Jenkinsfile | Generate a Docker Hub Access Token (Read & Write) for Jenkins Credentials, and correct the real username consistently across `Jenkinsfile`, Credentials, and `web-app.yaml` |
+| 3 | `fatal: destination path 'gitops-config' already exists and is not an empty directory` on subsequent builds | Jenkins reuses the same workspace across builds; a leftover clone from a previously failed run blocked the new `git clone` | Add `rm -rf gitops-config` immediately before the `git clone` step in the Jenkinsfile |
+| 4 | ArgoCD deployed the app, but pods entered `ErrImagePull` / `ImagePullBackOff` | `web-app.yaml` still referenced the original placeholder tag/username, which was never actually pushed to the registry | Correct the `image:` field to a real, pushed tag, and let Jenkins overwrite it automatically on the next build going forward |
+| 5 | All Grafana panels showed `No data` despite adding `prometheus.io/scrape` annotations | `kube-prometheus-stack` uses the Prometheus Operator, which discovers targets via `ServiceMonitor` custom resources — not legacy scrape annotations | Add a named port + labels to the Service, and create a matching `ServiceMonitor` with `release: <helm-release-name>` in its labels |
+| 6 | Grafana's Loki data source failed health checks with `parse error at line 1, col 1: unexpected IDENTIFIER`, even though Loki itself was healthy (`/ready` returned `ready`) | The default Loki version bundled with the `loki-stack` chart was too old for the newer Grafana's health-check query syntax | `helm upgrade loki-stack grafana/loki-stack -n monitoring --reuse-values --set loki.image.tag=2.9.3` |
+| 7 | `kubectl scale deployment postgres --replicas=0` (to simulate a failure) was silently reverted back to `replicas=1` within seconds | ArgoCD's Auto-Sync + Self-Heal actively reconciles any manual `kubectl` change back to what's declared in Git | Edit `replicas` inside the Git-managed YAML and push, instead of mutating the live cluster directly — the intended GitOps behavior |
+| 8 | ArgoCD's own HTTPS (self-signed) conflicted with the Ingress-managed TLS certificate | ArgoCD server serves HTTPS internally by default, causing double TLS termination behind the Ingress | Patch the `argocd-server` Deployment to run with the `--insecure` flag, letting Traefik + cert-manager fully own TLS termination at the Ingress layer |
 
 ---
 
