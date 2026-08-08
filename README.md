@@ -192,7 +192,7 @@ devops-cicd-gitops-lab/
 
 | Component | Technology / Badge | Description |
 |---|---|---|
-| **Cloud Provider** | ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | 2x EC2 instances (`t3.medium`) — Management Server (Jenkins + Ansible) and Target Server (K3s cluster) |
+| **Cloud Provider** | ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazon-aws&logoColor=white) | 2x EC2 instances (`m7i-flex.large`) — Management Server (Jenkins + Ansible) and Target Server (K3s cluster) |
 | **Orchestration** | ![Kubernetes](https://img.shields.io/badge/K3s-326CE5?style=flat-square&logo=kubernetes&logoColor=white) | Lightweight Kubernetes (K3s), bootstrapped remotely via Ansible |
 | **Configuration Mgmt** | ![Ansible](https://img.shields.io/badge/Ansible-EE0000?style=flat-square&logo=ansible&logoColor=white) | Idempotent playbook installs K3s + Helm and fetches kubeconfig automatically |
 | **Container Engine** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) | Custom Jenkins image with Docker CLI; app packaged via multi-stage Dockerfile |
@@ -227,8 +227,8 @@ Click the thumbnail below to watch the full CI/CD GitOps loop in action — from
 
 ### 1. AWS EC2 Instance Provisioning
 Create 2 EC2 Instances with the following configuration:
-* **AMI**: Ubuntu Server 22.04 LTS
-* **Instance Type**: `t3.medium` (2 vCPUs, 4GB RAM)
+* **AMI**: Ubuntu Server 24.04 LTS
+* **Instance Type**: `m7i-flex.large` (2 vCPUs, 8GB RAM)
 * **Names**: `Management-Server` and `Target-Server`
 * **Key Pair**: `devops-lab.pem`
 
