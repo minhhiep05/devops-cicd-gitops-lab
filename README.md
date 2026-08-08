@@ -227,10 +227,10 @@ Click the thumbnail below to watch the full CI/CD GitOps loop in action — from
 
 ### 1. AWS EC2 Instance Provisioning
 Create 2 EC2 Instances with the following configuration:
-* **AMI**: Ubuntu Server 22.04 LTS
-* **Instance Type**: `t3.medium` (2 vCPUs, 4GB RAM)
+* **AMI**: Ubuntu Server 24.04 LTS
+* **Instance Type**: `m7i-flex.large` (2 vCPUs, 8GB RAM)
 * **Names**: `Management-Server` and `Target-Server`
-* **Key Pair**: `devops-lab.pem`
+* **Key Pair**: `lab.pem`
 
 ### 2. Security Group Configuration
 * **SG-Management**: SSH (`22`) from *My IP*; HTTP (`8080`) from *Anywhere* (Jenkins UI)
