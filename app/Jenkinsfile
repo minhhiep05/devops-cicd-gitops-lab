@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_HUB_USER   = 'doanhiep05'
+        IMAGE_NAME        = 'my-devops-app'
+        IMAGE_TAG         = "${BUILD_NUMBER}"
+        GITOPS_REPO_SSH   = 'git@github.com:minhhiep05/devops-gitops-config.git'
+    }
+
+    stages {
+        stage('Checkout Source Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} ./app"
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                        sh "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    }
+                }
+            }
+        }
+
+        stage('Update GitOps Config') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'github-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                    sh """
+                    mkdir -p ~/.ssh
+                    cp ${SSH_KEY} ~/.ssh/id_rsa
+                    chmod 600 ~/.ssh/id_rsa
+                    ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+                    rm -rf gitops-config      
+                    git clone ${GITOPS_REPO_SSH} gitops-config
+                    cd gitops-config
+
+                    sed -i 's|image: ${DOCKER_HUB_USER}/${IMAGE_NAME}:.*|image: ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}|g' web-app.yaml
+
+                    git config user.name "Jenkins CI/CD"
+                    git config user.email "jenkins@domain.com"
+                    git add web-app.yaml
+                    git commit -m "Jenkins Auto-update image tag to ${IMAGE_TAG} [skip ci]" || echo "No changes to commit"
+                    git push origin main
+                    """
+                }
+            }
+        }
+    }
+}
